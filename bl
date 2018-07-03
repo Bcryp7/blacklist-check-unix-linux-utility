@@ -8,6 +8,12 @@
 # description: I was just a bit tired of web interfaces            #
 ####################################################################
 
+# Adapted to use hetrixtools.com blacklists.
+
+BLACKLIST="blists.txt"
+FOUND=0
+
+
 #### main ####
 main() {
 
@@ -17,14 +23,14 @@ main() {
 
   if [[ $fqdn ]] ; then
 
-    echo "You entered a domain: $1"
+    echo "[+] Searching domain: $1 in blacklists..." | cecho LGREEN
 
     domain=$(host $1 | head -n1 | awk '{print $4}')
 
-    reverseit $domain "IP not valid or domain could not be resolved."
+    reverseit $domain "[-] IP not valid or domain could not be resolved."
   else
 
-    echo "You entered an IP: $1"
+    echo "[+] Searching IP: $1 in blacklists..." | cecho YELLOW
     reverseit $1 "IP not valid."
   fi
 
@@ -35,7 +41,7 @@ main() {
 reverseit() {
 
   reverse=$(echo $1 |
-  sed -ne "s~^\([0-9]\{1,3\}\)\.\([0-9]\{1,3\}\)\.\([0-9]\{1,3\}\)\.\([0-9]\{1,3\}\)$~\4.\3.\2.\1~p")
+    sed -ne "s~^\([0-9]\{1,3\}\)\.\([0-9]\{1,3\}\)\.\([0-9]\{1,3\}\)\.\([0-9]\{1,3\}\)$~\4.\3.\2.\1~p")
 
   if [ "x${reverse}" = "x" ] ; then
 
@@ -47,31 +53,33 @@ reverseit() {
 #### loopthroughblacklists ####
 loopthroughblacklists() {
 
-  reverse_dns=$(dig +short -x $1)
+    reverse_dns=$(dig +short -x $1)
 
-  echo $1 name ${reverse_dns:----}
+    for bl in $(cat $BLACKLIST) ; do
 
-  for bl in ${blacklists} ; do
-
-      printf $(env tz=utc date "+%y-%m-%d_%h:%m:%s_%z")
-      printf "%-40s" " ${reverse}.${bl}."
-
-      listed="$(dig +short -t a ${reverse}.${bl}.)"
+      listed=$(dig +timeout=1 +short -t a ${reverse}.${bl}.)
 
       if [[ $listed ]]; then
 
-        if [[ $listed == *"timed out"* ]]; then
-
-          echo "[timed out]" | cecho YELLOW 
-        else
-        
-          echo "[blacklisted] (${listed})" | cecho LRED
+        if [[ $listed != *"timed out"* ]]; then
+ 
+          echo "[-] $1 blacklisted by: $bl" | cecho LRED
+          let FOUND=$FOUND+1
+          
+          if [[ $FOUND -gt 2 ]]; then
+            echo "[!] $1 blacklisted more than $FOUND times at hetrixtools.com." | cecho LRED
+            echo "[*] More info at: https://hetrixtools.com/blacklist-check/$1" | cecho LGREEN
+            exit 0
+          fi
+          
         fi
-      else
-
-          echo "[not listed]" | cecho LGREEN
       fi
-  done
+
+    done
+
+    if [[ $FOUND -eq 0 ]]; then
+      echo "[+] $1 not blacklisted by lists in file $BLACKLIST." | cecho LGREEN
+    fi
 }
 
 #### error ####
@@ -95,60 +103,6 @@ cecho(){
  
   echo -ne "${NORMAL}"
 }
-
-#### blacklists - grabbed from http://multirbl.valli.org/ ####
-blacklists="
-  0spamurl.fusionzero.com
-  uribl.zeustracker.abuse.ch
-  uribl.abuse.ro
-  l1.apews.org
-  dnsbl.aspnet.hu
-  bsb.empty.us
-  bsb.spamlookup.net
-  ex.dnsbl.org
-  in.dnsbl.org
-  dnsbl.othello.ch
-  (hidden)
-  ubl.nszones.com
-  uribl.pofon.foobar.hu
-  dyndns.rbl.jp
-  url.rbl.jp
-  abuse.rfc-clueless.org
-  bogusmx.rfc-clueless.org
-  dsn.rfc-clueless.org
-  elitist.rfc-clueless.org
-  fulldom.rfc-clueless.org
-  postmaster.rfc-clueless.org
-  whois.rfc-clueless.org
-  rhsbl.rymsho.ru
-  rhsbl.scientificspam.net
-  nomail.rhsbl.sorbs.net
-  badconf.rhsbl.sorbs.net
-  rhsbl.sorbs.net
-  fresh.spameatingmonkey.net
-  fresh10.spameatingmonkey.net
-  fresh15.spameatingmonkey.net
-  uribl.spameatingmonkey.net
-  urired.spameatingmonkey.net
-  dbl.spamhaus.org
-  multi.surbl.org
-  uribl.swinog.ch
-  dob.sibl.support-intelligence.net
-  black.uribl.com
-  grey.uribl.com
-  multi.uribl.com
-  red.uribl.com
-  uri.blacklist.woody.ch
-  rhsbl.zapbl.net
-  hostkarma.junkemailfilter.com
-  reputation-domain.rbl.scrolloutf1.com
-  reputation-ns.rbl.scrolloutf1.com
-  nobl.junkemailfilter.com
-  iddb.isipp.com
-  _vouch.dwl.spamhaus.org
-  white.uribl.com
-  list.anonwhois.net
-"
 
 ### initiate script ###
 main $1

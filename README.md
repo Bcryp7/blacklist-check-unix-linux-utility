@@ -1,39 +1,45 @@
 # blacklist-check-unix-linux-utility
-Blacklist check UNIX/Linux utility. I was just a bit tired of web interfaces.
+Blacklist check UNIX/Linux utility. Some changes made to original code, in order to met some needs.
 
-###Introduction
+### Introduction
 
 Check blacklisting for domains and IP addresses in shell.
 
 Works on UNIX/Linux systems with Bash.
 
-Blacklists grabbed from http://multirbl.valli.org/ (all DNSBLs).
+Blacklists grabbed from www.hetrixtools.com, you can get a more complete blacklist from: http://multirbl.valli.org/list/
 
-![ScreenShot](http://aarvik.dk/content/images/2013/Dec/bl.png)
+![ScreenShot](bl.png)
 
-###Installation
+### Installation
+    $ git clone https://github.com/ksaver/blacklist-check-unix-linux-utility
+    $ cd blacklist-check-unix-linux-utility
+    $ chmod +x bl
 
-    curl -O https://raw.githubusercontent.com/adionditsak/blacklist-check-unix-linux-utility/master/bl
-    chmod +x ./bl
-    mv ./bl /usr/bin
+### Usage
 
-###Usage
-
-    # Use with domains or IP addresses
-    $ bl domain.tld
-    $ bl 8.8.8.8 # IP
+	# Use with domains or IP addresses:
+	$ ./bl domain.tld
+	$ ./bl 8.8.8.8
     
-    # Pipe with other UNIX utils, eg. grep. Only blacklisted:
-    $ bl domain.tld | grep "blacklisted"
+	# Pipe with other UNIX utils, eg. grep. Only blacklisted:
+	$ ./bl domain.tld | grep "blacklisted"
 
-###Sample output
+	# If we have a file "list.txt" with many IP addresses to check:
+	$ for HOST in $(cat list.txt); do ./bl $HOST; done
 
-    $ bl 8.8.8.8
-    You entered an IP: 8.8.8.8
-    8.8.8.8 name google-public-dns-a.google.com.
-    15-02-17_Feb:02:1424185674_+0000 8.8.8.8.0spam.fusionzero.com.          [not listed]
-    15-02-17_Feb:02:1424185674_+0000 8.8.8.8.0spam-killlist.fusionzero.com. [not listed]
-    15-02-17_Feb:02:1424185674_+0000 8.8.8.8.rbl.abuse.ro.                  [not listed]
-    15-02-17_Feb:02:1424185674_+0000 8.8.8.8.spam.dnsbl.anonmails.de.       [not listed]
-    15-02-17_Feb:02:1424185674_+0000 8.8.8.8.dnsbl.anticaptcha.net.         [not listed]
-    ...
+The script needs the file "blists.txt" in the current directory. You can edit the path in code file.
+
+### Sample output
+
+	~$ ./bl google.com
+	[+] Searching domain: google.com in blacklists...
+	[+] google.com not found in blacklists.
+	~$ ./bl 93.174.93.149 
+	[+] Searching IP: 93.174.93.149 in blacklists...
+	[-] 93.174.93.149 blacklisted by: all.s5h.net
+	[-] 93.174.93.149 blacklisted by: babl.rbl.webiron.net
+	[-] 93.174.93.149 blacklisted by: bl.blocklist.de
+	[!] 93.174.93.149 blacklisted by more than 3 blacklists at hetrixtools.com.
+	[*] More info at: https://hetrixtools.com/blacklist-check/93.174.93.149
+	 ...
